@@ -4,37 +4,6 @@
     <!-- <form method="GET" action="/listings/new">
         <button>Create New Listing</button>
     </form> -->
-    <style>
-        #filters {
-            margin-top: 1rem;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .filter{
-            text-align: center;
-            margin-right: 2rem;
-            opacity: 0.7;
-        }
-        .filter:hover{
-            opacity: 1;
-            cursor: pointer;
-        }
-        .filter p{
-            font-size: 0.8rem;
-        }
-        .tax-info{
-            display: none;
-        }
-        .tax-toggle{
-            border: 1px solid rgb(36, 35, 35);
-            border-radius: 1rem;
-            padding: 1rem;
-            margin-left: 2rem;
-            display: flex;
-            align-items: center;
-        }
-    </style>
     <div id="filters">
         <div class="filter">
             <div><i class="fa-solid fa-fire"></i></div>
@@ -89,6 +58,11 @@
         </div>
     </div>
     <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">
+        <% if (allListings.length === 0) { %>
+            <div class="alert alert-warning text-center mt-4 ">
+                No listings found for your search.
+            </div>
+        <% } %>
         <% for(let listing of allListings){ %>
             <a href="/listings/<%= listing._id %>" class="listing-link">
                 <div class="card cols listing-card">
@@ -105,23 +79,4 @@
             </a>
         <% } %>
     </div>
-    <!-- <ul>
-        <% for(let listing of allListings){ %>
-            <li><a href="/listings/<%= listing._id%>"><%= listing.title %></a></li>
-        <% } %>
-    </ul> -->
 </body>
-
-<script>
-    let taxSwitch = document.getElementById("flexSwitchCheckDefault");
-    taxSwitch.addEventListener("click", () => {
-        let taxInfo = document.getElementsByClassName("tax-info");
-        for(info of taxInfo){
-            if(info.style.display != "inline"){
-                info.style.display = "inline";
-            }else{
-                info.style.display = "none";
-            }
-        }
-    });
-</script>

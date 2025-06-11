@@ -21,6 +21,7 @@ const reviewsRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 
 const dbUrl = process.env.ATLASDB_URL;
+// const Url = "mongodb://127.0.0.1:27017/wanderlust";
 
 main().then(() => {
     console.log("connect to DB");
@@ -91,7 +92,7 @@ app.use((err, req, res, next) => {
     res.status(statusCode).render("error.ejs", { message });
 });
 
-let port = 8081;
+let port = 8080;
 app.listen(port, () => {
     console.log(`app is listening at ${port}.`);
 });

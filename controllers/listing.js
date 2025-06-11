@@ -1,9 +1,25 @@
 const Listing = require("../models/listing.js");
 
 module.exports.index = async (req, res) => {
-    const allListings = await Listing.find({});
+    const {filter} = req.query;
+    // const allListings = await Listing.find({});
+    let allListings;
+
+    if (filter && filter !== "all") {
+        allListings = await Listing.find({ filters: filter });
+    } else {
+        allListings = await Listing.find({});
+    }
     res.render("listing/index.ejs", { allListings });
 };
+module.exports.search = async (req, res) => {
+    const {country} = req.query;
+    if(!country){
+        return res.redirect("/listings");
+    }
+    const allListings = await Listing.find({country : new RegExp(country, "i")});
+    res.render("listing/index.ejs", {allListings});
+}
 
 module.exports.renderNewForm = async (req, res) => {
     // req.flash("success", "New Listing Created!");
@@ -27,13 +43,19 @@ module.exports.showListing = async (req, res) => {
 };
 
 module.exports.createListing = async (req, res, next) => {
-    let url = req.file.path;
-    let filename = req.file.filename;
+    // let url = req.file.path;
+    // let filename = req.file.filename
+    let ur =  "https://images.unsplash.com/photo-1625505826533-5c80aca7d157?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGdvYXxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&w=800&q=60";
+    let url = req.file ? req.file.path : ur;
+    let filename = req.file ? req.file.filename : "default.jpg";
+
     // console.log(url, " .. ", filename);
+    // console.log(req.file);
     let listing = req.body.listing;
     const newListing = new Listing(listing);
     newListing.owner = req.user._id;
-    newListing.image = {url, filename};
+    newListing.image = {url, filename}
+
     await newListing.save();
     req.flash("success", "New Listing Created!");
     res.redirect("/listings");
