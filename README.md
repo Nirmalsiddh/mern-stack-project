@@ -58,7 +58,11 @@ npm install
 
 Start the Server:
     node app.js
-
+```
+Open in browser:
+```
+http://localhost:3000
+```
 
 🛠️ Developer Info
 Author: Nirmal Siddh
