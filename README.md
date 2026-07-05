@@ -1,72 +1,118 @@
 # MERN Stack Project
 
-A full-stack web application built with the **MERN (MongoDB, Express, React, Node.js)** stack, implementing listings management, user authentication, and a dynamic UI.
+This is a full-stack web application built with Node.js, Express.js, MongoDB, and EJS. The project includes user authentication, listing management, image uploads, and a responsive interface following the MVC architecture.
+
+## Live Demo
+
+Application: https://mern-stack-project-90uh.onrender.com
 
 ---
 
-## 📌 Features
+## Features
 
-- ✅ RESTful API for listings and users management
-- ✅ Secure user authentication and authorization
-- ✅ CRUD operations on listings
-- ✅ Clean, responsive frontend using EJS templating
-- ✅ Cloud-based file storage configuration
-- ✅ Modular MVC architecture
-- ✅ Styled UI with custom CSS and JS, Bootstrap
-- ✅ Passport - authentication middleware for Node.js.
-
----
-
-## 📂 Project Structure
-majorProject/
-├── app.js # Main application entry point
-├── controllers/ # Business logic
-├── init/ # Initial setup scripts and data
-├── models/ # Mongoose schemas
-├── public/ # Static files (CSS, JS)
-├── routes/ # Application routes
-├── views/ # EJS templates
-|---Middleware.js/ # for middleware
-├── package.json # Project metadata and dependencies
-└── README.md # Project documentation
-
+- User registration and login
+- Secure authentication using Passport.js
+- Create, update, and delete listings
+- Image upload with cloud storage
+- Responsive interface built with Bootstrap
+- MVC architecture for better code organization
+- RESTful routing
+- Server-side rendering using EJS
 
 ---
 
-## 📦 Tech Stack
+## Tech Stack
 
-- **Backend:** Node.js, Express.js
-- **Frontend:** EJS, HTML, CSS, JavaScript, Bootstrap, fontAwesome
-- **Database:** MongoDB (with Mongoose)
-- **Version Control:** Git & GitHub
+### Backend
+
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- Passport.js
+
+### Frontend
+
+- EJS
+- HTML
+- CSS
+- JavaScript
+- Bootstrap
+- Font Awesome
 
 ---
 
-## 🚀 Getting Started
+## Project Structure
 
-### Prerequisites:
-- Node.js and npm installed
-- MongoDB installed or cloud instance (MongoDB Atlas)
-- Git installed
+```text
+majorProject
+│
+├── controllers
+├── init
+├── models
+├── public
+├── routes
+├── views
+├── middleware.js
+├── app.js
+├── package.json
+└── README.md
+```
 
-### Installation:
+---
+
+## Getting Started
+
+### Clone the repository
+
 ```bash
 git clone https://github.com/your-username/mern-stack-project.git
 cd mern-stack-project
+```
+
+### Install dependencies
+
+```bash
 npm install
-
-
-Start the Server:
-    node app.js
 ```
-Open in browser:
+
+### Start the server
+
+```bash
+node app.js
 ```
+
+Open your browser and visit:
+
+```text
 http://localhost:3000
 ```
 
-🛠️ Developer Info
-Author: Nirmal Siddh
+---
 
-GitHub: Nirmal Siddh
+## Environment Variables
 
-Tech Stack: MERN (MongoDB, Express, Node, EJS frontend)
+Create a `.env` file in the root directory and add the following:
+
+```env
+ATLASDB_URL=your_mongodb_connection_string
+SECRET=your_session_secret
+CLOUD_NAME=your_cloudinary_name
+CLOUD_API_KEY=your_cloudinary_api_key
+CLOUD_API_SECRET=your_cloudinary_api_secret
+
+```
+
+## Future Enhancements
+
+- Search and filter listings
+- User profile management
+- Reviews and ratings
+- Interactive maps for listing locations
+- Improved UI and animations
+
+---
+
+## Author
+
+Nirmal Siddh
