@@ -92,7 +92,7 @@ app.use((err, req, res, next) => {
     res.status(statusCode).render("error.ejs", { message });
 });
 
-let port = 8080;
+let port = process.env.PORT || 8080;
 app.listen(port, () => {
     console.log(`app is listening at ${port}.`);
 });
