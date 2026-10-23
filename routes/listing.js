@@ -4,9 +4,8 @@ const Listing = require("../models/listing.js");
 const wrapAsync = require("../utils/wrapAsync.js");
 const { isLoggedIn, isOwner, validateListing, loadListing } = require("../middleware.js");
 const listingController = require("../controllers/listing.js");
-const multer = require("multer");
-const { storage } = require("../cloudConfig.js");
-const upload = multer({ storage });
+const { parseImage, uploadImage } = require("../utils/imageUpload");
+const { requireCsrf } = require("../utils/csrf");
 router.param("id", loadListing);
 
 router.route("/")
@@ -14,7 +13,7 @@ router.route("/")
     .get(wrapAsync(listingController.index))
 
     // Create Route
-    .post( isLoggedIn, upload.single("listing[image]"), validateListing, wrapAsync(listingController.createListing));
+    .post( isLoggedIn, parseImage, requireCsrf, validateListing, uploadImage, wrapAsync(listingController.createListing));
     
     // .post(upload.single("listing[image]"), (req, res) => {
     //     res.send(req.file);
@@ -28,9 +27,9 @@ router.route("/:id")
     //show Route
     .get(wrapAsync(listingController.showListing))
     // Update Route
-    .put(isLoggedIn, isOwner, upload.single("listing[image]"), validateListing, wrapAsync(listingController.updateListing))
+    .put(isLoggedIn, isOwner, parseImage, requireCsrf, validateListing, uploadImage, wrapAsync(listingController.updateListing))
     // Delete Route
-    .delete(isLoggedIn, isOwner, wrapAsync(listingController.destroyListing));
+    .delete(isLoggedIn, isOwner, requireCsrf, wrapAsync(listingController.destroyListing));
 
 
 // Edit Route

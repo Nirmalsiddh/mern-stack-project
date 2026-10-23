@@ -1,6 +1,7 @@
 const Listing = require("../models/listing.js");
 
 const ExpressError = require("../utils/ExpressError.js");
+const { cleanupUnusedUpload } = require("../utils/imageUpload");
 const { normalizeCategory } = require("../utils/categories.js");
 
 module.exports.index = async (req, res) => {
@@ -59,7 +60,12 @@ module.exports.createListing = async (req, res, next) => {
     newListing.owner = req.user._id;
     newListing.image = {url, filename}
 
-    await newListing.save();
+    try {
+        await newListing.save();
+    } catch (err) {
+        await cleanupUnusedUpload(req.newImage, Listing, err);
+        throw err;
+    }
     req.flash("success", "New Listing Created!");
     res.redirect("/listings");
 };
@@ -96,6 +102,7 @@ module.exports.updateListing = async (req, res) => {
     try {
         await listing.save();
     } catch (err) {
+        await cleanupUnusedUpload(req.newImage, Listing, err);
         if (err.name === "DocumentNotFoundError") {
             throw new ExpressError(404, "Listing not found.");
         }

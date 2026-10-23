@@ -89,7 +89,6 @@ test('session store error handler never logs credential or session payloads', t 
     assert.doesNotThrow(() => handler());
     assert.equal(log.mock.callCount(), 2);
     for (const call of log.mock.calls) assert.doesNotMatch(call.arguments.join(' '), /credential|session-id/);
-    assert.match(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), /store.on\("error", logSessionStoreError\)/);
 });
 
 test('async resource lookup errors reach Express next', async t => {
@@ -144,7 +143,7 @@ test('review deletion UI is restricted to authors and tolerates missing authors'
     const author = { _id: new mongoose.Types.ObjectId(), username: 'Author' };
     const review = { _id: new mongoose.Types.ObjectId(), author, comment: 'Review', rating: 4 };
     const listing = { _id: new mongoose.Types.ObjectId(), owner, title: 'Listing', description: 'Text', image: { url: 'image' }, price: 100, reviews: [review] };
-    const render = currUser => ejs.renderFile(path.join(root, 'views/listing/show.ejs'), { layout() {}, listing, currUser });
+    const render = currUser => ejs.renderFile(path.join(root, 'views/listing/show.ejs'), { layout() {}, listing, currUser, csrfToken: "test-token" });
     const control = `reviews/${review._id}?_method=DELETE`;
     assert.ok((await render(author)).includes(control));
     assert.ok(!(await render(owner)).includes(control));

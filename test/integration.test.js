@@ -50,7 +50,7 @@ test('HTTP application regressions on an isolated disposable MongoDB database', 
     await new Promise(resolve => probe.close(resolve));
     child = spawn(process.execPath, ['app.js'], {
         cwd: path.join(__dirname, '..'),
-        env: { ...process.env, NODE_ENV: 'test', ATLASDB_URL: uri, SECRET: randomBytes(48).toString('hex'), PORT: String(port) },
+        env: { ...process.env, NODE_ENV: 'test', ATLASDB_URL: uri, SECRET: randomBytes(48).toString('hex'), PORT: String(port), CLOUD_NAME: '', CLOUD_API_KEY: '', CLOUD_API_SECRET: '', UPLOADS_ENABLED: 'false', TRUST_PROXY: '', AUTH_WINDOW_MS: '900000', LOGIN_LIMIT: '10', SIGNUP_LIMIT: '5', SHUTDOWN_TIMEOUT_MS: '2000' },
         stdio: ['ignore', 'pipe', 'pipe'],
     });
     let logs = '';
@@ -64,7 +64,16 @@ test('HTTP application regressions on an isolated disposable MongoDB database', 
     const base = `http://127.0.0.1:${port}`;
     function client() {
         let cookie = '';
-        return async (url, fields, method = 'GET') => {
+        const send = async (url, fields, method = 'GET') => {
+            const writing = Boolean(fields) || !['GET', 'HEAD', 'OPTIONS'].includes(method);
+            if (writing) {
+                const formPage = await fetch(base + '/login', { headers: cookie ? { Cookie: cookie } : {} });
+                const sessionCookie = formPage.headers.get('set-cookie');
+                if (sessionCookie) cookie = sessionCookie.split(';')[0];
+                const token = (await formPage.text()).match(/name="_csrf" value="([^"]+)"/)[1];
+                fields = { ...(fields || {}), _csrf: token };
+                send.preWriteCookie = cookie;
+            }
             const response = await fetch(base + url, {
                 method: fields ? (method === 'GET' ? 'POST' : method) : method,
                 headers: { ...(cookie ? { Cookie: cookie } : {}), ...(fields ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) },
@@ -75,6 +84,11 @@ test('HTTP application regressions on an isolated disposable MongoDB database', 
             if (setCookie) cookie = setCookie.split(';')[0];
             return { status: response.status, location: response.headers.get('location'), text: await response.text() };
         };
+        send.cookie = () => cookie;
+        send.raw = async (url, body, method = 'POST') => fetch(base + url, {
+            method, headers: cookie ? { Cookie: cookie } : {}, body, redirect: 'manual',
+        });
+        return send;
     }
     const owner = client();
     const stranger = client();
@@ -102,6 +116,7 @@ test('HTTP application regressions on an isolated disposable MongoDB database', 
         assert.ok(user.hash && user.salt);
         assert.equal(user.password, undefined);
         ownerId = user._id;
+        assert.notEqual(owner.cookie(), owner.preWriteCookie, 'Registration rotates the session ID');
         assert.equal((await owner('/listings/new')).status, 200);
         assert.equal((await stranger('/signup', { username: 'phase1_stranger', email: 'stranger@example.invalid', password: 'unique-test-password' })).status, 302);
     });
@@ -235,10 +250,13 @@ test('HTTP application regressions on an isolated disposable MongoDB database', 
         assert.equal((await db.collection('listings').findOne({ _id: listingId })).reviews.length, 0);
     });
     await t.test('logout ends access; failed and successful login behave correctly', async () => {
-        assert.equal((await owner('/logout')).status, 302);
+        const beforeLogout = owner.cookie();
+        assert.equal((await owner('/logout', {})).status, 302);
+        assert.equal(await db.collection('sessions').findOne({ _id: decodeURIComponent(beforeLogout.split('=')[1]).slice(2).split('.')[0] }), null);
         assert.equal((await owner(`/listings/${listingId}/edit`)).location, '/login');
-        assert.equal((await owner('/login', { ...credentials, password: 'wrong-password' })).location, '/login');
-        assert.equal((await owner('/login', credentials)).location, `/listings/${listingId}/edit`);
+        assert.equal((await owner('/login', { username: credentials.username, password: 'wrong-password' })).location, '/login');
+        assert.equal((await owner('/login', { username: credentials.username, password: credentials.password })).location, `/listings/${listingId}/edit`);
+        assert.notEqual(owner.cookie(), owner.preWriteCookie, 'Login rotates the session ID');
         assert.equal((await owner(`/listings/${listingId}/edit`)).status, 200);
     });
     await t.test('legacy listing updates use real document validation and persistence', async legacy => {
@@ -254,6 +272,152 @@ test('HTTP application regressions on an isolated disposable MongoDB database', 
         assert.equal(await db.collection('reviews').findOne({ _id: review._id }), null);
         assert.equal((await guest(`/listings/${listingId}`)).status, 404);
     });
+    await t.test('application forms reject missing/invalid CSRF tokens on state changes', async () => {
+        for (const url of ['/signup', '/login', '/logout']) {
+            for (const token of [null, 'invalid']) {
+                const response = await owner.raw(url, new URLSearchParams(token ? { _csrf: token } : {}));
+                assert.equal(response.status, 403);
+                assert.doesNotMatch(await response.text(), /EBADCSRFTOKEN|stack|mongodb:\/\//);
+            }
+        }
+        assert.equal((await owner('/logout')).status, 405);
+        const legacy = await db.collection('listings').findOne({ title: 'Legacy alias' });
+        for (const [url, method] of [[`/listings/${legacy._id}`, 'PUT'], [`/listings/${legacy._id}`, 'DELETE'], ['/listings', 'POST'], [`/listings/${legacy._id}/reviews`, 'POST']]) {
+            for (const token of [null, 'invalid']) {
+                const response = await owner.raw(url, new URLSearchParams(token ? { _csrf: token } : {}), method);
+                assert.equal(response.status, 403);
+                await response.text();
+            }
+        }
+        assert.equal((await owner(`/listings/${legacy._id}/reviews`, { 'review[rating]': '4', 'review[comment]': 'Phase2 CSRF deletion test' })).status, 302);
+        const review = await db.collection('reviews').findOne({ comment: 'Phase2 CSRF deletion test' });
+        assert.equal((await db.collection('listings').findOne({ _id: legacy._id })).filters, 'iconic cities');
+        for (const token of [null, 'invalid']) {
+            const response = await owner.raw(`/listings/${legacy._id}/reviews/${review._id}`, new URLSearchParams(token ? { _csrf: token } : {}), 'DELETE');
+            assert.equal(response.status, 403);
+            await response.text();
+        }
+        assert.ok(await db.collection('reviews').findOne({ _id: review._id }));
+        assert.equal((await owner(`/listings/${legacy._id}/reviews/${review._id}`, null, 'DELETE')).status, 302);
+        const multipart = new FormData();
+        multipart.set('_csrf', 'invalid');
+        multipart.set('listing[image]', new Blob(['not an image'], { type: 'image/png' }), 'fake.png');
+        const rejected = await owner.raw(`/listings/${legacy._id}`, multipart, 'PUT');
+        assert.equal(rejected.status, 403);
+        await rejected.text();
+    });
+    await t.test('authentication attempts are rate-limited with generic errors', async () => {
+        assert.equal((await guest('/signup', credentials)).location, '/signup');
+        const duplicate = await guest('/signup');
+        assert.match(duplicate.text, /Unable to create an account with those details/);
+        assert.doesNotMatch(duplicate.text, /already registered|already exists/);
+        let limitedLogin = false;
+        for (let attempt = 0; attempt < 12; attempt++) {
+            const response = await guest('/login', { username: 'nonexistentuser', password: 'not-the-password' });
+            if (response.status === 429) { limitedLogin = true; assert.doesNotMatch(response.text, /nonexistentuser/); break; }
+            assert.equal(response.location, '/login');
+        }
+        assert.equal(limitedLogin, true);
+        let limitedSignup = false;
+        for (let attempt = 0; attempt < 6; attempt++) {
+            const response = await guest('/signup', { username: '?', email: 'test@example.invalid', password: 'test-password-123' });
+            if (response.status === 429) { limitedSignup = true; break; }
+            assert.equal(response.status, 400);
+        }
+        assert.equal(limitedSignup, true);
+    });
+    await t.test('rate counters are shared across app instances and forwarded IPs do not bypass them', async shared => {
+        const express = require('express');
+        const { createAuthLimiters } = require('../utils/authRateLimit');
+        const collection = db.collection('security_test_limits');
+        await collection.createIndex({ expires: 1 }, { expireAfterSeconds: 0 });
+        const addresses = [];
+        shared.mock.method(console, 'error', () => {}); // Ignore the framework warning for deliberately forged XFF.
+        for (let index = 0; index < 2; index++) {
+            const app = express();
+            app.post('/login', createAuthLimiters(collection, { authWindowMs: 3600000, loginLimit: 2, signupLimit: 2 }).login, (req, res) => res.send('accepted'));
+            const server = app.listen(0, '127.0.0.1');
+            await once(server, 'listening');
+            shared.after(() => new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }));
+            addresses.push(`http://127.0.0.1:${server.address().port}/login`);
+        }
+        assert.equal((await fetch(addresses[0], { method: 'POST' })).status, 200);
+        assert.equal((await fetch(addresses[1], { method: 'POST' })).status, 200);
+        const forged = await fetch(addresses[0], { method: 'POST', headers: { 'X-Forwarded-For': '203.0.113.99' } });
+        assert.equal(forged.status, 429);
+        const counter = await collection.findOne({});
+        assert.equal(counter.count, 3);
+        assert.ok(counter.expires instanceof Date);
+        assert.ok((await collection.indexes()).some(index => index.expireAfterSeconds === 0));
+    });
+    await t.test('encrypted session round-trip, expiry and malformed envelope rejection use the real store', async () => {
+        const MongoStore = require('connect-mongo');
+        const transforms = require('../utils/sessionTransforms')(randomBytes(48).toString('hex'));
+        const store = MongoStore.create({ client: connection.getClient(), autoRemove: 'disabled', ...transforms });
+        await store.collectionP;
+        const get = id => new Promise((resolve, reject) => store.get(id, (error, value) => error ? reject(error) : resolve(value)));
+        const value = { cookie: { expires: new Date(Date.now() + 60000).toISOString() }, passport: { user: 'synthetic-session-user' } };
+        await new Promise((resolve, reject) => store.set('phase2-correction-valid', value, error => error ? reject(error) : resolve()));
+        assert.deepEqual(await get('phase2-correction-valid'), value);
+        const record = await db.collection('sessions').findOne({ _id: 'phase2-correction-valid' });
+        assert.doesNotMatch(record.session, /synthetic-session-user/);
+        await db.collection('sessions').insertOne({ ...record, _id: 'phase2-correction-expired', expires: new Date(Date.now() - 60000) });
+        assert.equal(await get('phase2-correction-expired'), null);
+        const envelope = JSON.parse(record.session);
+        envelope.tag = Buffer.from(envelope.tag, 'base64').subarray(0, 4).toString('base64');
+        await db.collection('sessions').insertOne({ ...record, _id: 'phase2-correction-invalid', session: JSON.stringify(envelope) });
+        await assert.rejects(get('phase2-correction-invalid'), /^Error: Invalid stored session\.$/);
+        // This store shares the fixture-owned client; fixture teardown closes it.
+    });
+    await t.test('readiness deadline cancels a real driver command behind an unresponsive TCP proxy', async fault => {
+        const { MongoClient } = require('mongodb');
+        const { createReadinessCheck } = require('../app');
+        const sockets = new Set();
+        let blackhole = false;
+        const proxy = net.createServer(downstream => {
+            const upstream = net.connect(Number(target.port) || 27017, target.hostname);
+            for (const socket of [downstream, upstream]) {
+                sockets.add(socket);
+                socket.on('close', () => sockets.delete(socket));
+                socket.on('error', () => { downstream.destroy(); upstream.destroy(); });
+            }
+            downstream.on('data', bytes => { if (!blackhole) upstream.write(bytes); });
+            upstream.on('data', bytes => { if (!blackhole) downstream.write(bytes); });
+            downstream.on('end', () => upstream.end());
+            upstream.on('end', () => downstream.end());
+        }).listen(0, '127.0.0.1');
+        await once(proxy, 'listening');
+        const client = new MongoClient(`mongodb://127.0.0.1:${proxy.address().port}/${db.databaseName}?directConnection=true`, { serverSelectionTimeoutMS: 1000, connectTimeoutMS: 1000 });
+        fault.after(async () => {
+            for (const socket of sockets) socket.destroy();
+            await client.close();
+            await new Promise(resolve => proxy.close(resolve));
+        });
+        await client.connect();
+        const probeDb = client.db(db.databaseName);
+        await probeDb.command({ ping: 1 });
+        let calls = 0, finished;
+        const settled = new Promise(resolve => { finished = resolve; });
+        const ready = createReadinessCheck({ readyState: 1, db: { command: (...args) => { calls++; return probeDb.command(...args).finally(finished); } } }, 50);
+        blackhole = true;
+        assert.deepEqual(await Promise.all(Array.from({ length: 10 }, () => ready())), Array(10).fill(false));
+        assert.equal(calls, 1);
+        assert.equal(await Promise.race([settled.then(() => true), wait(1000).then(() => false)]), true, 'Underlying driver work must settle after cancellation');
+    });
+    await t.test('health checks, encrypted sessions, and graceful SIGTERM are operational', async () => {
+        const live = await fetch(base + '/health/live');
+        assert.equal(live.status, 200);
+        assert.equal(live.headers.get('set-cookie'), null);
+        assert.equal((await fetch(base + '/health/ready')).status, 200);
+        const stored = await db.collection('sessions').findOne({});
+        assert.equal(JSON.parse(stored.session).version, 1);
+        assert.doesNotMatch(stored.session, /csrfToken|passport|phase1_owner/);
+        const exited = once(child, 'exit');
+        child.kill('SIGTERM');
+        const [code, signal] = await exited;
+        assert.equal(code, 0);
+        assert.equal(signal, null);
+    });
     assert.doesNotMatch(logs, /ERR_HTTP_HEADERS_SENT|UnhandledPromiseRejection|ReferenceError/);
 });
 
@@ -263,25 +427,21 @@ async function verifyLegacyUpdates(t, connection, ownerId) {
     const express = require('express');
     const Listing = require('../models/listing');
     const TestListing = connection.model('Listing', Listing.schema);
-    const { storage } = require('../cloudConfig');
+    const { installHarnessSecurity, csrfSession, mockUpload, png } = require('../test-support/security');
     const router = require('../routes/listing');
     const { categories, normalizeCategory } = require('../utils/categories');
     let uploads = 0;
     t.mock.method(Listing, 'findById', (...args) => TestListing.findById(...args));
-    t.mock.method(Listing, 'findByIdAndUpdate', (...args) => TestListing.findByIdAndUpdate(...args));
-    t.mock.method(storage, '_handleFile', (req, file, done) => {
-        uploads++;
-        file.stream.resume();
-        file.stream.on('end', () => done(null, { path: 'https://example.invalid/replacement.png', filename: 'mock-replacement' }));
-    });
+    t.mock.method(Listing, 'exists', (...args) => TestListing.exists(...args));
+    mockUpload(t, 'wanderlust_DEV/mock-replacement', () => { uploads++; });
     const app = express();
+    installHarnessSecurity(app);
     app.set('views', path.join(__dirname, '../views'));
     app.set('view engine', 'ejs');
     app.engine('ejs', require('ejs-mate'));
     app.use((req, res, next) => {
         req.user = req.headers['x-test-user'] === 'owner' ? { _id: ownerId } : req.headers['x-test-user'] === 'stranger' ? { _id: new mongoose.Types.ObjectId() } : undefined;
         req.isAuthenticated = () => Boolean(req.user);
-        req.session = {};
         req.flash = () => {};
         Object.assign(res.locals, { currUser: req.user, categories, normalizeCategory, success: [], error: [] });
         next();
@@ -300,11 +460,13 @@ async function verifyLegacyUpdates(t, connection, ownerId) {
         return insertedId;
     }
     async function update(id, { category, image = false, user = 'owner' } = {}) {
+        const csrf = await csrfSession(base);
         const body = new FormData();
+        body.set('_csrf', csrf.token);
         for (const [key, value] of Object.entries({ title: 'After update', description: 'Updated description', location: 'Updated city', country: 'Japan', price: '200' })) body.set(`listing[${key}]`, value);
         if (category !== undefined) body.set('listing[filters]', category);
-        if (image) body.set('listing[image]', new Blob(['fake PNG'], { type: 'image/png' }), 'replacement.png');
-        const response = await fetch(`${base}/listings/${id}`, { method: 'PUT', body, headers: user ? { 'x-test-user': user } : {}, redirect: 'manual' });
+        if (image) body.set('listing[image]', new Blob([await png()], { type: 'image/png' }), 'replacement.png');
+        const response = await fetch(`${base}/listings/${id}`, { method: 'PUT', body, headers: { Cookie: csrf.cookie, ...(user ? { 'x-test-user': user } : {}) }, redirect: 'manual' });
         await response.text();
         return response;
     }
@@ -323,7 +485,7 @@ async function verifyLegacyUpdates(t, connection, ownerId) {
                 const doc = await collection.findOne({ _id: id });
                 assert.equal(doc.filters, canonical);
                 assert.equal(doc.title, 'After update');
-                assert.equal(doc.image.filename, image ? 'mock-replacement' : 'original');
+                assert.equal(doc.image.filename, image ? 'wanderlust_DEV/mock-replacement' : 'original');
             });
         }
     }
