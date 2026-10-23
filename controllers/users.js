@@ -14,7 +14,7 @@ module.exports.signUp = async(req, res, next) => {
             if(err){
                 return next(err);
             }
-            req.flash("success", `Welcome to Wanderlust`);
+            req.flash("success", `Welcome to HavenHub`);
             res.redirect("/listings");
         });
     }catch(e){
@@ -29,7 +29,7 @@ module.exports.renderLoginForm = (req, res) => {
 
 module.exports.login = async (req, res) => {
     // res.send("Welocome to the wanderlust, you are logged in!");
-    req.flash("success", "Welcome back to Wanderlust");
+    req.flash("success", "Welcome back to HavenHub");
     let redirectUrl = require("../utils/safeRedirect")(res.locals.redirectUrl);
     res.redirect(redirectUrl);
 };

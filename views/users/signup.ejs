@@ -1,29 +1,40 @@
-<% layout("/layouts/boilerplate.ejs") %>
-    <div class="row mt-3">
-        <div class="col-6 offset-3">
-            <h2>SignUp on WanderLust</h2>
-            <br>
-            <form method="post" action="/signup" class="needs-validation" novalidate>
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <div class="mb-3">
-                    <label for="username" class="form-label">Username</label>
-                    <input type="text" id="username" placeholder="Enter Username" name="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_]+" title="Use 3–32 letters, numbers, or underscores" autocomplete="username" class="form-control" required>
-                    <div class="valid-feedback">
-                        Looks good!
-                    </div>
-                    <div class="invalid-feedback">
-                        Please enter username
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" id="email" placeholder="Enter EmailId" name="email" maxlength="254" autocomplete="email" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password (at least 12 characters)</label>
-                    <input type="password" id="password" placeholder="Enter Password" name="password" minlength="12" maxlength="128" autocomplete="new-password" class="form-control" required>
-                </div>
-                <button class="btn btn-outline-success">SignUp</button>
-            </form>
-        </div>
+<% layout('/layouts/boilerplate.ejs') %>
+<section class="auth-layout" aria-labelledby="auth-title">
+    <div class="auth-story">
+        <span class="eyebrow">Find your next chapter</span>
+        <p class="auth-story-title">A world of places.<br>A place for you.</p>
+        <p>Discover somewhere new, share your space and help fellow travelers with your reviews.</p>
+        <span class="story-decoration" aria-hidden="true">✳</span>
     </div>
+    <div class="auth-form">
+        <p class="eyebrow">Good to have you here</p>
+        <h1 id="auth-title">Join HavenHub.</h1>
+        <p class="form-intro">A little closer to your next adventure.</p>
+        <form method="post" action="/signup" class="needs-validation" novalidate>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="field">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_]+" autocomplete="username" class="form-control" aria-describedby="username-help username-error" required>
+                <p id="username-help" class="field-help">3–32 letters, numbers or underscores.</p>
+                <div id="username-error" class="invalid-feedback">Use 3–32 letters, numbers or underscores.</div>
+            </div>
+            <div class="field">
+                <label for="email">Email address</label>
+                <input type="email" id="email" name="email" maxlength="254" autocomplete="email" class="form-control" aria-describedby="email-error" required>
+                <div id="email-error" class="invalid-feedback">Please enter a valid email address.</div>
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" minlength="12" maxlength="128" autocomplete="new-password" class="form-control" aria-describedby="password-help password-error" required>
+                <p id="password-help" class="field-help">Use at least 12 characters, up to 128.</p>
+                <div id="password-error" class="invalid-feedback">Your password needs 12–128 characters.</div>
+            </div>
+            <button type="submit" class="button button-full">Create account <svg class="icon" aria-hidden="true">
+                    <use href="#icon-arrow"/>
+                </svg>
+            </button>
+        </form>
+        <p class="auth-alternate">Already feel at home? <a href="/login">Log in</a>
+        </p>
+    </div>
+</section>
