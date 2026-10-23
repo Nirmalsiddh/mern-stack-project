@@ -15,6 +15,9 @@ const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
+const { categories, normalizeCategory } = require("./utils/categories.js");
+const logSessionStoreError = require("./utils/sessionStoreError.js");
+const errorHandler = require("./utils/errorHandler.js");
 
 const listingsRouter = require("./routes/listing.js");
 const reviewsRouter = require("./routes/review.js");
@@ -48,9 +51,7 @@ const store = MongoStore.create({
     touchAfter: 24 * 3600, // for Lazy update
 });
 
-store.on("error", () => {
-    console.log("Error in mongo session store", err);
-})
+store.on("error", logSessionStoreError);
 const sessionOptions = {
     store,
     secret:  process.env.SECRET,
@@ -77,6 +78,8 @@ app.use((req, res, next) => {
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error");
     res.locals.currUser = req.user;
+    res.locals.categories = categories;
+    res.locals.normalizeCategory = normalizeCategory;
     next();
 });
 
@@ -91,10 +94,7 @@ app.get("/", (req, res) => {
 app.all("*", (req, res, next) => {
     next(new ExpressError(404, "Page not found"));
 })
-app.use((err, req, res, next) => {
-    let { statusCode = 500, message = "Something went wrong" } = err;
-    res.status(statusCode).render("error.ejs", { message });
-});
+app.use(errorHandler);
 
 let port = process.env.PORT || 8080;
 app.listen(port, () => {

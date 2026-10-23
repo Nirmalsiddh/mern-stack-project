@@ -1,25 +1,32 @@
 const Listing = require("../models/listing.js");
 
-module.exports.index = async (req, res) => {
-    const {filter} = req.query;
-    // const allListings = await Listing.find({});
-    let allListings;
+const ExpressError = require("../utils/ExpressError.js");
+const { normalizeCategory } = require("../utils/categories.js");
 
-    if (filter && filter !== "all") {
-        allListings = await Listing.find({ filters: filter });
-    } else {
-        allListings = await Listing.find({});
-    }
+module.exports.index = async (req, res) => {
+    const rawFilter = req.query.filter;
+    const filter = rawFilter === undefined ? "all" : normalizeCategory(rawFilter);
+    if (!filter) throw new ExpressError(400, "Invalid listing category.");
+    // Include legacy hyphenated records as well as the original spaced values.
+    const query = filter === "all" ? {} : {
+        filters: { $in: [...new Set([filter, filter.replace(/ /g, "-")])] },
+    };
+    const allListings = await Listing.find(query);
     res.render("listing/index.ejs", { allListings });
 };
+
 module.exports.search = async (req, res) => {
-    const {country} = req.query;
-    if(!country){
-        return res.redirect("/listings");
+    const { country } = req.query;
+    if (country === undefined) return res.redirect("/listings");
+    if (typeof country !== "string" || country.length > 100) {
+        throw new ExpressError(400, "Search must be text of at most 100 characters.");
     }
-    const allListings = await Listing.find({country : new RegExp(country, "i")});
-    res.render("listing/index.ejs", {allListings});
-}
+    const search = country.trim();
+    if (!search) return res.redirect("/listings");
+    const literal = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const allListings = await Listing.find({ country: new RegExp(literal, "i") }, null, { maxTimeMS: 2000 });
+    res.render("listing/index.ejs", { allListings });
+};
 
 module.exports.renderNewForm = async (req, res) => {
     // req.flash("success", "New Listing Created!");
@@ -32,13 +39,9 @@ module.exports.renderNewForm = async (req, res) => {
 };
 
 module.exports.showListing = async (req, res) => {
-    const { id } = req.params;
-    const listing = await Listing.findById(id).populate({path: "reviews", populate: {path: "author"}}).populate("owner");
-    // console.log(listing);
-    if (!listing) {
-        req.flash("error", "Listing you requested for doesn't exist!");
-        res.redirect("/listings");
-    }
+    const listing = res.locals.listing;
+    await listing.populate({ path: "reviews", populate: { path: "author" } });
+    await listing.populate("owner");
     res.render("listing/show.ejs", { listing });
 };
 
@@ -62,33 +65,41 @@ module.exports.createListing = async (req, res, next) => {
 };
 
 module.exports.renderEditForm = async (req, res) => {
-    const { id } = req.params;
-    const listing = await Listing.findById(id);
+    const listing = res.locals.listing;
 
     let originalImageUrl = listing.image.url;
     originalImageUrl = originalImageUrl.replace("/upload", "/upload/h_300,w_250");
     // console.log(originalImageUrl);
-    req.flash("success", "Listing Edited!");
     res.render("listing/edit.ejs", { listing, originalImageUrl });
 };
 
 module.exports.updateListing = async (req, res) => {
-    // if (!req.body.listing) {
-    //     throw new ExpressError(400, "Send valid data for listing");
-    // }
-    let { id } = req.params;
-    // let listing = await Listing.findById(id);
-    // if(!(currUser && listing.owner._id.equals(res.locals.currUser._id))){
-    //     req.flash("error", "You don't have permission to edit");
-    //     return res.redirect(`/listings/${id}`);
-    // }
-    let listing = await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+    const { id } = req.params;
+    const listing = res.locals.listing; // Loaded and ownership-checked before upload.
+    if (!listing) throw new ExpressError(404, "Listing not found.");
 
-    if(typeof req.file !== "undefined"){
-        let url = req.file.path;
-        let filename = req.file.filename;
-        listing.image = { url, filename };
+    const updates = { ...req.body.listing };
+    // Only a processed upload may replace the stored image object.
+    delete updates.image;
+    listing.set(updates);
+
+    // Preserve an explicit selection, otherwise normalize the existing value.
+    // Unknown historical values remain invalid rather than being silently lost.
+    const category = normalizeCategory(listing.filters);
+    if (category) listing.filters = category;
+    else if (listing.filters == null) listing.filters = "all";
+
+    if (req.file) {
+        listing.image = { url: req.file.path, filename: req.file.filename };
+    }
+    // Mongoose validates the complete document before issuing one database write.
+    try {
         await listing.save();
+    } catch (err) {
+        if (err.name === "DocumentNotFoundError") {
+            throw new ExpressError(404, "Listing not found.");
+        }
+        throw err;
     }
     req.flash("success", "Listing Updated!");
     res.redirect(`/listings/${id}`);
@@ -97,7 +108,7 @@ module.exports.updateListing = async (req, res) => {
 module.exports.destroyListing = async (req, res) => {
     let { id } = req.params;
     let deletelistings = await Listing.findByIdAndDelete(id);
-    // console.log(deletelistings);
+    if (!deletelistings) throw new ExpressError(404, "Listing not found.");
     req.flash("success", "Listing Deleted!");
     res.redirect("/listings");
 };

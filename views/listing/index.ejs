@@ -5,50 +5,12 @@
         <button>Create New Listing</button>
     </form> -->
     <div id="filters">
-        <div class="filter">
-            <div><i class="fa-solid fa-fire"></i></div>
-            <p>Trending</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-solid fa-bed"></i></div>
-            <p>Rooms</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-sharp-duotone fa-solid fa-mountain-city"></i></div>
-            <p>Iconic cities</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-solid fa-mountain"></i></div>
-            <p>Mountains</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-regular fa-chess-rook"></i></div>
-            <p>Castles</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-solid fa-person-swimming"></i></div>
-            <p>Amazing Pools</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-solid fa-campground"></i></div>
-            <p>Camping</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-solid fa-tractor"></i></div>
-            <p>Farms</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-regular fa-snowflake"></i></div>
-            <p>Arctic</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-sharp fa-solid fa-igloo"></i></div>
-            <p>Domes</p>
-        </div>
-        <div class="filter">
-            <div><i class="fa-solid fa-sailboat"></i></div>
-            <p>Boats</p>
-        </div>
+        <% for (const category of categories) { %>
+            <a class="filter listing-link" href="/listings?filter=<%= encodeURIComponent(category.value) %>">
+                <div><i class="<%= category.icon %>"></i></div>
+                <p><%= category.label %></p>
+            </a>
+        <% } %>
 
         <div class="tax-toggle">
             <div class="form-check-reverse form-switch">
