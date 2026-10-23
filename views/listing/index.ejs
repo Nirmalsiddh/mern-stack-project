@@ -35,11 +35,11 @@ const icons = { all: 'grid', trending: 'flame', rooms: 'bed', 'iconic cities': '
             </h2>
         </div>
         <p class="result-count">
-            <%= allListings.length %> <%= allListings.length === 1 ? 'stay' : 'stays' %> to explore</p>
+            <%= typeof pagination !== 'undefined' ? pagination.total : allListings.length %> <%= (typeof pagination !== 'undefined' ? pagination.total : allListings.length) === 1 ? 'stay' : 'stays' %> to explore</p>
     </div>
     <nav class="category-filters" aria-label="Accommodation categories">
         <% for (const category of categories) { %>
-            <a class="category-filter <%= active === category.value ? 'is-active' : '' %>" href="/listings?filter=<%= encodeURIComponent(category.value) %>" <%- active === category.value ? 'aria-current="page"' : '' %>>
+            <a class="category-filter <%= active === category.value ? 'is-active' : '' %>" href="<%= typeof categoryUrl === 'function' ? categoryUrl(category.value) : '/listings?filter=' + encodeURIComponent(category.value) %>" <%- active === category.value ? 'aria-current="page"' : '' %>>
                 <svg class="icon" aria-hidden="true">
                     <use href="#icon-<%= icons[category.value] || 'home' %>"/>
                 </svg>
@@ -49,6 +49,14 @@ const icons = { all: 'grid', trending: 'flame', rooms: 'bed', 'iconic cities': '
             </a>
         <% } %>
     </nav>
+    <% if (typeof sortOptions !== 'undefined') { %>
+        <form class="sort-controls" action="/listings" method="get">
+            <% if (term) { %><input type="hidden" name="country" value="<%= term %>"><% } %>
+            <% if (active && active !== 'all') { %><input type="hidden" name="filter" value="<%= active %>"><% } %>
+            <input type="hidden" name="pageSize" value="<%= pageSize %>">
+            <label for="sort">Sort stays</label><select class="form-select" id="sort" name="sort"><% for (const option of sortOptions) { %><option value="<%= option.value %>" <%= sort === option.value ? 'selected' : '' %>><%= option.label %></option><% } %></select><button class="button button-secondary" type="submit">Apply sort</button>
+        </form>
+    <% } %>
     <div class="discovery-toolbar">
         <span>Find a place worth coming back to.</span>
         <label class="tax-toggle" for="flexSwitchCheckDefault">
@@ -66,45 +74,8 @@ const icons = { all: 'grid', trending: 'flame', rooms: 'bed', 'iconic cities': '
             <a class="button button-secondary" href="/listings">Explore all stays</a>
         </div>
     <% } else { %>
-        <div class="listing-grid">
-            <% for (const listing of allListings) { %>
-                <article class="stay-card">
-                    <a class="stay-link" href="/listings/<%= listing._id %>">
-                        <div class="stay-photo">
-                            <img src="<%= listing.image?.url || '/images/stay-placeholder.svg' %>" data-fallback="/images/stay-placeholder.svg" width="640" height="480" loading="lazy" decoding="async" alt="<%= listing.image?.url ? listing.title : 'Photo unavailable for ' + listing.title %>">
-                            <% if (listing.country) { %>
-                                <span class="photo-label">
-                                    <%= listing.country %>
-                                </span>
-                            <% } %>
-                        </div>
-                        <div class="stay-heading">
-                            <h3>
-                                <%= listing.title %>
-                            </h3>
-                            <svg class="icon card-arrow" aria-hidden="true">
-                                <use href="#icon-arrow"/>
-                            </svg>
-                        </div>
-                        <p class="stay-location">
-                            <svg class="icon" aria-hidden="true">
-                                <use href="#icon-pin"/>
-                            </svg>
-                            <%= [listing.location, listing.country].filter(Boolean).join(', ') || 'Location not provided' %>
-                        </p>
-                        <p class="stay-price">
-                            <% if (Number.isFinite(listing.price)) { %>
-                                <strong>₹<%= listing.price.toLocaleString('en-IN') %>
-                                </strong>
-                                <span> / night</span>
-                            <% } else { %>
-                                <span>Price unavailable</span>
-                            <% } %>
-                            <span class="tax-info"> +18% GST</span>
-                        </p>
-                    </a>
-                </article>
-            <% } %>
-        </div>
+        <%- include('cards.ejs') %>
     <% } %>
 </section>
+
+<% if (typeof pagination !== 'undefined') { %><%- include('../includes/pagination.ejs') %><% } %>

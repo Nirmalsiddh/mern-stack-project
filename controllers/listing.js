@@ -4,29 +4,29 @@ const ExpressError = require("../utils/ExpressError.js");
 const { cleanupUnusedUpload } = require("../utils/imageUpload");
 const { normalizeCategory } = require("../utils/categories.js");
 
-module.exports.index = async (req, res) => {
-    const rawFilter = req.query.filter;
-    const filter = rawFilter === undefined ? "all" : normalizeCategory(rawFilter);
-    if (!filter) throw new ExpressError(400, "Invalid listing category.");
-    // Include legacy hyphenated records as well as the original spaced values.
-    const query = filter === "all" ? {} : {
-        filters: { $in: [...new Set([filter, filter.replace(/ /g, "-")])] },
+const { discovery, sortOptions } = require('../utils/discovery');
+const { pageInfo } = require('../utils/pagination');
+const { attachRatings } = require('../utils/ratings');
+async function renderDiscovery(req, res) {
+    const state = discovery(req.query);
+    const total = await Listing.countDocuments(state.filter).maxTimeMS(2000);
+    const pagination = pageInfo(total, state.page, '/listings', state.params, state.size);
+    const allListings = await Listing.find(state.filter, 'title image price location country', {
+        maxTimeMS: 2000, sort: state.order, skip: pagination.skip, limit: pagination.size,
+    });
+    await attachRatings(allListings);
+    const categoryUrl = category => {
+        const params = { filter: category, ...state.params }; params.filter = category;
+        return '/listings?' + new URLSearchParams(params).toString().replace(/\+/g, '%20');
     };
-    const allListings = await Listing.find(query);
-    res.render("listing/index.ejs", { allListings, activeCategory: filter, searchTerm: "" });
-};
-
+    res.render('listing/index.ejs', { allListings, pagination, activeCategory: state.category, searchTerm: state.country, sort: state.sort, sortOptions, categoryUrl, pageSize: state.size });
+}
+module.exports.index = renderDiscovery;
 module.exports.search = async (req, res) => {
-    const { country } = req.query;
-    if (country === undefined) return res.redirect("/listings");
-    if (typeof country !== "string" || country.length > 100) {
-        throw new ExpressError(400, "Search must be text of at most 100 characters.");
-    }
-    const search = country.trim();
-    if (!search) return res.redirect("/listings");
-    const literal = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const allListings = await Listing.find({ country: new RegExp(literal, "i") }, null, { maxTimeMS: 2000 });
-    res.render("listing/index.ejs", { allListings, activeCategory: null, searchTerm: search });
+    // Retain the established empty-country redirect, validating structure first.
+    const state = discovery(req.query);
+    if (!state.country) return res.redirect('/listings');
+    return renderDiscovery(req, res);
 };
 
 module.exports.renderNewForm = async (req, res) => {
@@ -41,9 +41,13 @@ module.exports.renderNewForm = async (req, res) => {
 
 module.exports.showListing = async (req, res) => {
     const listing = res.locals.listing;
-    await listing.populate({ path: "reviews", populate: { path: "author" } });
+    // Keep malformed legacy values out of Mongoose's Number casting; the shared
+    // aggregation supplies both the summary and validated individual star values.
+    await listing.populate({ path: "reviews", options: { lean: true }, populate: { path: "author" } });
     await listing.populate("owner");
-    res.render("listing/show.ejs", { listing });
+    await attachRatings([listing], { includeReviewRatings: true });
+    const isSaved = req.user ? Boolean(await require('../models/favorite').exists({ user: req.user._id, listing: listing._id })) : false;
+    res.render("listing/show.ejs", { listing, isSaved });
 };
 
 module.exports.createListing = async (req, res, next) => {
@@ -73,7 +77,7 @@ module.exports.createListing = async (req, res, next) => {
 module.exports.renderEditForm = async (req, res) => {
     const listing = res.locals.listing;
 
-    let originalImageUrl = listing.image.url;
+    let originalImageUrl = listing.image?.url || '/images/stay-placeholder.svg';
     originalImageUrl = originalImageUrl.replace("/upload", "/upload/h_300,w_250");
     // console.log(originalImageUrl);
     res.render("listing/edit.ejs", { listing, originalImageUrl });

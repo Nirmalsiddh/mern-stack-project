@@ -13,6 +13,12 @@
             <%= [listing.location, listing.country].filter(Boolean).join(', ') || 'Location not provided' %>
         </p>
     </header>
+    <%- include('../includes/rating-summary.ejs', { listing }) %>
+    <div class="account-actions">
+        <% if (currUser) { const saved = typeof isSaved !== 'undefined' && isSaved; %>
+            <form method="post" action="/saved/<%= listing._id %><%= saved ? '?_method=DELETE' : '' %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button button-secondary" aria-pressed="<%= saved %>"><%= saved ? 'Saved — remove listing' : 'Save listing' %></button></form>
+        <% } else { %><a class="button button-secondary" href="/login">Log in to save this listing</a><% } %>
+    </div>
     <div class="detail-photo">
         <img src="<%= listing.image?.url || '/images/stay-placeholder.svg' %>" data-fallback="/images/stay-placeholder.svg" alt="<%= listing.image?.url ? listing.title : 'Photo unavailable for ' + listing.title %>" width="1200" height="720" fetchpriority="high">
     </div>
@@ -77,8 +83,7 @@
                                     <% } %>
                                 </div>
                                 <span class="review-rating">
-                                    <span aria-hidden="true">★</span> <%= review.rating %>
-                                    <span class="muted"> / 5</span>
+                                    <% if (Number.isFinite(review.rating) && review.rating >= 1 && review.rating <= 5) { %><span aria-hidden="true">★</span> <%= review.rating %><span class="muted"> / 5</span><% } else { %>Rating unavailable<% } %>
                                 </span>
                             </header>
                             <p>
