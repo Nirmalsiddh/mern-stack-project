@@ -1,0 +1,8 @@
+<% layout('/layouts/boilerplate.ejs') %>
+<header class="form-heading account-heading"><p class="eyebrow">Your HavenHub</p><h1><%= heading %></h1><p><%= intro %></p></header>
+<% if (!allListings.length) { %>
+    <section class="empty-state"><h2><%= collectionMode === 'saved' ? 'No saved stays yet.' : 'Your first listing starts here.' %></h2><p><%= collectionMode === 'saved' ? 'Explore a space and save it for later.' : 'Share a space you love with fellow travelers.' %></p><a class="button" href="<%= collectionMode === 'saved' ? '/listings' : '/listings/new' %>"><%= collectionMode === 'saved' ? 'Explore stays' : 'Create a listing' %></a></section>
+<% } else { %>
+    <%- include('../listing/cards.ejs', { collectionMode }) %>
+<% } %>
+<%- include('../includes/pagination.ejs') %>

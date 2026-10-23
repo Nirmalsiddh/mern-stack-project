@@ -301,3 +301,18 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 .feedback .btn-close { position: absolute; top: .75rem; right: .75rem; width: 28px; height: 28px; min-width: 28px; padding: .25rem; border: 0; border-radius: 4px; background-color: transparent; color: inherit; }
 .feedback .btn-close::after { content: '×'; font-size: 1.4rem; line-height: 1; }
 .feedback .btn-close { background-image: none; }
+
+/* Account pages reuse the Phase 4 components. */
+.account-heading { padding-top: var(--space-5); }
+.account-actions { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1rem 0; }
+.account-actions form { margin: 0; }
+.pagination-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1rem; margin-top: var(--space-4); }
+.pagination-controls [aria-disabled] { color: var(--muted); }
+.profile-summary dd { overflow-wrap: anywhere; margin-bottom: 1.25rem; }
+@media (min-width: 901px) { .desktop-navigation { gap: .65rem; } .header-inner { gap: 1rem; } .site-search { width: 250px; } }
+@media (max-width: 1200px) { .desktop-navigation { display: none; } .mobile-navigation { display: block; position: relative; margin-left: auto; } .mobile-navigation summary { display: flex; align-items: center; min-height: 44px; padding: .5rem .75rem; cursor: pointer; } .mobile-navigation nav { display: flex; flex-direction: column; position: absolute; right: 0; top: 100%; width: 240px; padding: 1rem; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); } }
+
+.sort-controls { display: flex; align-items: center; flex-wrap: wrap; gap: .75rem; margin-top: 1.25rem; }
+.sort-controls .form-select { width: auto; max-width: 100%; }
+.sort-controls label { font-weight: 600; }
+.rating-summary { color: var(--muted); font-size: .8rem; margin-bottom: .5rem; }

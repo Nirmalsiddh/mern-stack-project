@@ -1,4 +1,4 @@
-# MERN Stack Project
+# HavenHub
 
 This is a full-stack web application built with Node.js, Express.js, MongoDB, and EJS. The project includes user authentication, listing management, image uploads, and a responsive interface following the MVC architecture.
 
@@ -13,7 +13,10 @@ Application: https://mern-stack-project-90uh.onrender.com
 - User registration and login
 - Secure authentication using Passport.js
 - Create, update, and delete listings
-- Country search and category filters
+- Country search and legacy-compatible category filters
+- Authenticated saved listings, owner dashboard and private account overview
+- Server-side pagination and allowlisted record/price sorting
+- Live average ratings and review counts without stored summary fields
 - Create and delete reviews with author authorization
 - Image upload with cloud storage
 - Responsive interface built with Bootstrap
@@ -40,7 +43,6 @@ Application: https://mern-stack-project-90uh.onrender.com
 - CSS
 - JavaScript
 - Bootstrap
-- Font Awesome
 
 ---
 
@@ -128,7 +130,7 @@ either all Cloudinary settings or explicitly disabled uploads. Review the
 
 ## Future Enhancements
 
-- User profile management
+- Profile editing and account recovery
 - Interactive maps for listing locations
 - Improved UI and animations
 
@@ -156,7 +158,7 @@ npm test
 ```
 
 This runs the unit, template, browser-script, security, and mocked-upload tests without a
-MongoDB connection. The HTTP/database suite is explicitly skipped unless a safe
+MongoDB connection. The two HTTP/database suites are explicitly skipped unless a safe
 test target is supplied. To run the complete suite against a local MongoDB:
 
 ```bash
@@ -262,3 +264,27 @@ Start with `.env.example`, supply a strong random `SECRET`, and keep actual
 credentials outside Git. Production requires HTTPS and explicit trusted proxy
 addresses if TLS terminates upstream. Logout now uses its POST form with CSRF
 protection. Existing Phase 1 sessions require reauthentication after this update.
+
+## Portfolio features (Phase 5)
+
+Sign in to use **Saved** (`/saved`), **My listings** (`/my-listings`) and **Profile**
+(`/profile`). Save or remove a stay from its detail page; saved state is shown in
+text and an accessible pressed state. Owner management reuses protected edit and
+delete forms. The profile shows only your stored username/email and live counts;
+no account creation date is inferred.
+
+Discovery supports `page` (positive decimal, up to six digits), `pageSize` (1–24,
+default 12), and `sort` (`newest`, `oldest`, `price-asc`, `price-desc`). Pagination
+retains country/category/sort state and clamps beyond the final page. Newest and
+oldest use deterministic ObjectId record order because historical creation dates
+are unavailable. Missing prices sort before numbers ascending and after numbers
+descending and remain labeled unavailable. Saved/owned pages show 12 stays each.
+
+Ratings use valid linked reviews only, with one-decimal averages and a no-review
+state. No rating summaries are persisted. Favorites introduce a new collection
+with unique user/listing pairs and lookup/cleanup indexes; listing indexes support
+owner, category and price queries. Review additive index rollout before production
+use, especially when disabling Mongoose automatic indexes. No destructive migration
+or production data operation is required or was executed.
+
+See [Phase 5 decisions, verification and limitations](docs/phase5-portfolio.md).

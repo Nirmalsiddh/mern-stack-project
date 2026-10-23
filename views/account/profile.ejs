@@ -1,0 +1,3 @@
+<% layout('/layouts/boilerplate.ejs') %>
+<section class="listing-form-layout"><header class="form-heading"><p class="eyebrow">Your HavenHub</p><h1>My profile</h1><p>Your spaces, saved stays and account overview.</p></header>
+<div class="listing-form"><dl class="profile-summary"><dt>Username</dt><dd><%= account.username %></dd><dt>Email</dt><dd><%= account.email %></dd><dt>Owned listings</dt><dd><%= owned %></dd><dt>Saved listings</dt><dd><%= saved %></dd></dl><nav class="account-actions" aria-label="Your account"><a class="button button-secondary" href="/my-listings">My listings</a><a class="button button-secondary" href="/saved">Saved listings</a></nav></div></section>

@@ -36,8 +36,12 @@ const listingSchema = new Schema({
         default: "all",
     }
 });
+listingSchema.index({ price: 1, _id: 1 });
+listingSchema.index({ filters: 1, _id: -1 });
+listingSchema.index({ owner: 1, _id: -1 });
 listingSchema.post("findOneAndDelete", async(listing) => {
     if(listing){
+        await require('./favorite').deleteMany({ listing: listing._id });
         await Review.deleteMany({ _id: {$in : listing.reviews}});
     }
 });

@@ -18,6 +18,7 @@ const body = { title: 'Test', description: 'Description', country: 'India', loca
 for (const input of ['[', '.*', '(a+)+$', 'India']) {
     test(`search treats ${JSON.stringify(input)} as literal text`, async t => {
         let query;
+        t.mock.method(Listing, 'countDocuments', () => ({ maxTimeMS: async () => 0 }));
         t.mock.method(Listing, 'find', async value => { query = value; return []; });
         await controller.search({ query: { country: input } }, { render(view, data) { assert.deepEqual(data.allListings, []); } });
         assert.equal(query.country.test(input), true);
@@ -56,6 +57,7 @@ test('categories normalize old links and validate listing input', () => {
 });
 
 test('filter queries include spaced and legacy hyphenated records', async t => {
+    t.mock.method(Listing, 'countDocuments', () => ({ maxTimeMS: async () => 0 }));
     let query;
     t.mock.method(Listing, 'find', async value => { query = value; return []; });
     await controller.index({ query: { filter: 'amazing-pools' } }, { render() {} });
@@ -174,6 +176,7 @@ test('central errors forward after headers are sent without sending a second res
 });
 
 test('search queries have a database execution time limit', async t => {
+    t.mock.method(Listing, 'countDocuments', () => ({ maxTimeMS: async () => 0 }));
     let options;
     t.mock.method(Listing, 'find', async (query, projection, settings) => { options = settings; return []; });
     await controller.search({ query: { country: 'India' } }, { render() {} });

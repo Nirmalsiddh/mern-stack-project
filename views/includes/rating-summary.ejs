@@ -1,0 +1,2 @@
+<% const summary = listing.ratingSummary; %>
+<p class="rating-summary"><% if (summary && summary.count) { %><span aria-hidden="true">★</span> <%= summary.average.toFixed(1) %> out of 5 · <%= summary.count %> <%= summary.count === 1 ? 'review' : 'reviews' %><% } else { %>No reviews yet<% } %></p>

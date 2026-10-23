@@ -83,6 +83,7 @@ function createApp({ config, store, connection = mongoose.connection, authLimite
     app.use(addCsrfToken);
     app.use('/listings', require('./routes/listing'));
     app.use('/listings/:id/reviews', require('./routes/review'));
+    app.use('/', require('./routes/account'));
     app.use('/', require('./routes/user'));
     app.get('/', (req, res) => res.redirect('/listings'));
     app.all('*', (req, res, next) => next(new ExpressError(404, 'Page not found')));

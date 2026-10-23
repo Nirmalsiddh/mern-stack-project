@@ -4,6 +4,9 @@
     <a class="navigation-link" data-nav-link href="/login">Log in</a>
     <a class="button button-small" href="/signup">Join HavenHub</a>
 <% } else { %>
+    <a class="navigation-link" data-nav-link href="/saved">Saved</a>
+    <a class="navigation-link" data-nav-link href="/my-listings">My listings</a>
+    <a class="navigation-link" data-nav-link href="/profile">Profile</a>
     <form action="/logout" method="post" class="logout-form">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button class="button button-small button-secondary" type="submit">Log out</button>
