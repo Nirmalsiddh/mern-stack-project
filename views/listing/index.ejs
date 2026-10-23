@@ -1,44 +1,110 @@
-<% layout("/layouts/boilerplate.ejs") %>
-<body>
-    <!-- <h3>All Lists Occurs</h3> -->
-    <!-- <form method="GET" action="/listings/new">
-        <button>Create New Listing</button>
-    </form> -->
-    <div id="filters">
-        <% for (const category of categories) { %>
-            <a class="filter listing-link" href="/listings?filter=<%= encodeURIComponent(category.value) %>">
-                <div><i class="<%= category.icon %>"></i></div>
-                <p><%= category.label %></p>
-            </a>
-        <% } %>
-
-        <div class="tax-toggle">
-            <div class="form-check-reverse form-switch">
-                <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault">
-                <label class="form-check-label" for="flexSwitchCheckDefault">Display Total after Taxes </label>
-            </div>
+<% layout('/layouts/boilerplate.ejs');
+const term = typeof searchTerm === 'string' ? searchTerm : '';
+const active = typeof activeCategory === 'undefined' ? 'all' : activeCategory;
+const icons = { all: 'grid', trending: 'flame', rooms: 'bed', 'iconic cities': 'city', mountains: 'mountain', castles: 'castle', 'amazing pools': 'pool', camping: 'tent', farms: 'farm', arctic: 'snow', domes: 'dome', boats: 'boat' };
+%>
+<section class="discovery-hero" aria-labelledby="discovery-title">
+    <div class="hero-copy">
+        <p class="eyebrow">
+            <span class="eyebrow-line">
+            </span> A place for your next chapter</p>
+        <h1 id="discovery-title">Find your kind<br>of <em>somewhere.</em>
+        </h1>
+        <p class="hero-description">City hideaways. Quieter corners. Discover a place that feels a little more like you.</p>
+        <a class="button hero-button" href="#stays">Explore the stays <svg class="icon" aria-hidden="true">
+                <use href="#icon-arrow"/>
+            </svg>
+        </a>
+    </div>
+    <div class="hero-visual">
+        <img src="https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&amp;fit=crop&amp;w=1200&amp;q=80" data-fallback="/images/stay-placeholder.svg" width="1200" height="800" alt="A quiet courtyard surrounded by greenery" fetchpriority="high">
+        <div class="hero-caption">
+            <span class="caption-spark" aria-hidden="true">✳</span>
+            <span>A change of scenery.<br>
+                <strong>A little room to breathe.</strong>
+            </span>
         </div>
     </div>
-    <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">
-        <% if (allListings.length === 0) { %>
-            <div class="alert alert-warning text-center mt-4 ">
-                No listings found for your search.
-            </div>
-        <% } %>
-        <% for(let listing of allListings){ %>
-            <a href="/listings/<%= listing._id %>" class="listing-link">
-                <div class="card cols listing-card">
-                    <img src='<%= listing.image.url %>' class="card-img-top" alt="listing-image" style="height: 20rem;">
-                    <div class="card-img-overlay"></div>
-                    <div class="card-body">
-                    <p class="card-text">
-                        <b><%= listing.title %></b> <br>
-                        &#8377; <%= listing.price.toLocaleString("en-IN")%> / night
-                        <i class="tax-info">&nbsp; &nbsp;+18% GST</i>
-                    </p>
-                    </div>
-                </div>
+</section>
+<section id="stays" class="discovery-section" aria-labelledby="stays-title">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Your next stay starts here</p>
+            <h2 id="stays-title">
+                <%= term ? 'Stays in ' + term : active && active !== 'all' ? (categories.find(c => c.value === active)?.label || 'Explore stays') : 'Good places. Great possibilities.' %>
+            </h2>
+        </div>
+        <p class="result-count">
+            <%= allListings.length %> <%= allListings.length === 1 ? 'stay' : 'stays' %> to explore</p>
+    </div>
+    <nav class="category-filters" aria-label="Accommodation categories">
+        <% for (const category of categories) { %>
+            <a class="category-filter <%= active === category.value ? 'is-active' : '' %>" href="/listings?filter=<%= encodeURIComponent(category.value) %>" <%- active === category.value ? 'aria-current="page"' : '' %>>
+                <svg class="icon" aria-hidden="true">
+                    <use href="#icon-<%= icons[category.value] || 'home' %>"/>
+                </svg>
+                <span>
+                    <%= category.label %>
+                </span>
             </a>
         <% } %>
+    </nav>
+    <div class="discovery-toolbar">
+        <span>Find a place worth coming back to.</span>
+        <label class="tax-toggle" for="flexSwitchCheckDefault">
+            <input type="checkbox" id="flexSwitchCheckDefault" role="switch"> Show tax note</label>
     </div>
-</body>
+    <% if (!allListings.length) { %>
+        <div class="empty-state">
+            <span class="state-icon">
+                <svg class="icon" aria-hidden="true">
+                    <use href="#icon-search"/>
+                </svg>
+            </span>
+            <h3>No listings found<%= term ? ' for ' + term : '' %>.</h3>
+            <p>Try another country or explore all categories to find your next haven.</p>
+            <a class="button button-secondary" href="/listings">Explore all stays</a>
+        </div>
+    <% } else { %>
+        <div class="listing-grid">
+            <% for (const listing of allListings) { %>
+                <article class="stay-card">
+                    <a class="stay-link" href="/listings/<%= listing._id %>">
+                        <div class="stay-photo">
+                            <img src="<%= listing.image?.url || '/images/stay-placeholder.svg' %>" data-fallback="/images/stay-placeholder.svg" width="640" height="480" loading="lazy" decoding="async" alt="<%= listing.image?.url ? listing.title : 'Photo unavailable for ' + listing.title %>">
+                            <% if (listing.country) { %>
+                                <span class="photo-label">
+                                    <%= listing.country %>
+                                </span>
+                            <% } %>
+                        </div>
+                        <div class="stay-heading">
+                            <h3>
+                                <%= listing.title %>
+                            </h3>
+                            <svg class="icon card-arrow" aria-hidden="true">
+                                <use href="#icon-arrow"/>
+                            </svg>
+                        </div>
+                        <p class="stay-location">
+                            <svg class="icon" aria-hidden="true">
+                                <use href="#icon-pin"/>
+                            </svg>
+                            <%= [listing.location, listing.country].filter(Boolean).join(', ') || 'Location not provided' %>
+                        </p>
+                        <p class="stay-price">
+                            <% if (Number.isFinite(listing.price)) { %>
+                                <strong>₹<%= listing.price.toLocaleString('en-IN') %>
+                                </strong>
+                                <span> / night</span>
+                            <% } else { %>
+                                <span>Price unavailable</span>
+                            <% } %>
+                            <span class="tax-info"> +18% GST</span>
+                        </p>
+                    </a>
+                </article>
+            <% } %>
+        </div>
+    <% } %>
+</section>

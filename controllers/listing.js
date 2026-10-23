@@ -13,7 +13,7 @@ module.exports.index = async (req, res) => {
         filters: { $in: [...new Set([filter, filter.replace(/ /g, "-")])] },
     };
     const allListings = await Listing.find(query);
-    res.render("listing/index.ejs", { allListings });
+    res.render("listing/index.ejs", { allListings, activeCategory: filter, searchTerm: "" });
 };
 
 module.exports.search = async (req, res) => {
@@ -26,7 +26,7 @@ module.exports.search = async (req, res) => {
     if (!search) return res.redirect("/listings");
     const literal = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const allListings = await Listing.find({ country: new RegExp(literal, "i") }, null, { maxTimeMS: 2000 });
-    res.render("listing/index.ejs", { allListings });
+    res.render("listing/index.ejs", { allListings, activeCategory: null, searchTerm: search });
 };
 
 module.exports.renderNewForm = async (req, res) => {

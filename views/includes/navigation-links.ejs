@@ -1,0 +1,11 @@
+<a class="navigation-link" data-nav-link href="/listings">Explore</a>
+<a class="navigation-link" data-nav-link href="/listings/new">Share your space</a>
+<% if (!currUser) { %>
+    <a class="navigation-link" data-nav-link href="/login">Log in</a>
+    <a class="button button-small" href="/signup">Join HavenHub</a>
+<% } else { %>
+    <form action="/logout" method="post" class="logout-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="button button-small button-secondary" type="submit">Log out</button>
+    </form>
+<% } %>

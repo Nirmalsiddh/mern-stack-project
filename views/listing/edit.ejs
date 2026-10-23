@@ -1,70 +1,20 @@
-<% layout("/layouts/boilerplate.ejs") %>
-    <div class="row mt-3">
-        <div class="col-8 offset-2">
-            <h3>Edit your Listing</h3>
-            <form method="post" action="/listings/<%= listing._id %>?_method=put" novalidate class="needs-validation" enctype="multipart/form-data">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <div class="mb-3">
-                    <label for="title" class="form-label">Title</label>
-                    <input type="text" value="<%= listing.title %>" name="listing[title]" maxlength="120" class="form-control" required>
-                    <div class="valid-feedback">
-                        Title Looks good!
-                    </div>
-                    <div class="invalid-feedback">
-                        Please enter Title
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="description" class="form-label">Description</label>
-                    <textarea type="text" name="listing[description]" maxlength="5000"
-                        class="form-control" required><%= listing.description %></textarea>
-                    <div class="invalid-feedback">
-                        Please enter description
-                    </div>
-                </div>
-                <div class="mb-3">
-                    Original Listing Image
-                    <br>
-                    <img src="<%= originalImageUrl %>" alt="original Listing Image"><br>
-                </div>
-                <div class="mb-3">
-                    <label for="image" class="form-label">Upload New Image</label>
-                    <input type="file" value="<%= listing.image.url %>" name="listing[image]" accept="image/png,image/jpeg" class="form-control">
-                </div>
-                <div class="mb-3">
-                    <label for="filters" class="form-label">Category</label>
-                    <select id="filters" name="listing[filters]" class="form-select" required>
-                        <% for (const category of categories) { %>
-                            <option value="<%= category.value %>" <%= (normalizeCategory(listing.filters) || "all") === category.value ? "selected" : "" %>><%= category.label %></option>
-                        <% } %>
-                    </select>
-                </div>
-                <div class="row">
-                    <div class="mb-3 col-md-4">
-                        <label for="price" class="form-label">Price</label>
-                        <input type="number" value="<%= listing.price %>" name="listing[price]" min="0" max="10000000" class="form-control" required>
-                        <div class="invalid-feedback">
-                            Invalid Price!
-                        </div>
-                    </div>
-                    <div class="mb-3 col-md-8">
-                        <label for="country" class="form-label">Country</label>
-                        <input type="text" value="<%= listing.country %>" name="listing[country]" maxlength="80" class="form-control" required>
-                        <div class="invalid-feedback">
-                            Please enter country name
-                        </div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="location" class="form-label">Location</label>
-                    <input type="text" value="<%= listing.location %>" name="listing[location]" maxlength="120" class="form-control" required>
-                    <div class="invalid-feedback">
-                        Please enter your location
-                    </div>
-                </div>
-                <br>
-                <button type="submit" class="btn btn-dark edit-btn mt-3">Edit</button>
-                <br><br>
-            </form>
+<% layout('/layouts/boilerplate.ejs') %>
+<div class="listing-form-layout">
+    <a class="back-link" href="/listings/<%= listing._id %>">← Back to your listing</a>
+    <header class="form-heading">
+        <p class="eyebrow">A little refresh</p>
+        <h1>Edit your space.</h1>
+        <p>Keep the details of your haven up to date.</p>
+    </header>
+    <form method="post" action="/listings/<%= listing._id %>?_method=put" novalidate class="needs-validation listing-form" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <%- include('form-fields.ejs', { draft: listing, editing: true }) %>
+        <div class="form-actions">
+            <a class="button button-secondary" href="/listings/<%= listing._id %>">Cancel</a>
+            <button type="submit" class="button">Save changes <svg class="icon" aria-hidden="true">
+                    <use href="#icon-arrow"/>
+                </svg>
+            </button>
         </div>
-    </div>
+    </form>
+</div>

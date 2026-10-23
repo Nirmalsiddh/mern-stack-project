@@ -1,0 +1,73 @@
+<p class="required-note">Fields marked <span aria-hidden="true">*</span> are required.</p>
+<fieldset class="form-section">
+    <legend>The essentials</legend>
+    <p class="section-description">Give your space a name and a little personality.</p>
+    <div class="field">
+        <label for="title">Listing title <span aria-hidden="true">*</span>
+        </label>
+        <input type="text" id="title" name="listing[title]" value="<%= draft.title || '' %>" maxlength="120" class="form-control" placeholder="A quiet hideaway in the city" aria-describedby="title-error" required>
+        <div id="title-error" class="invalid-feedback">Add a title, up to 120 characters.</div>
+    </div>
+    <div class="field">
+        <label for="description">About your space <span aria-hidden="true">*</span>
+        </label>
+        <textarea id="description" name="listing[description]" maxlength="5000" rows="5" class="form-control" placeholder="Help travelers picture a stay at your place." aria-describedby="description-help description-error" required><%= draft.description || '' %></textarea>
+        <p id="description-help" class="field-help">Up to 5,000 characters.</p>
+        <div id="description-error" class="invalid-feedback">Please describe your space.</div>
+    </div>
+    <div class="field">
+        <label for="category">Category <span aria-hidden="true">*</span>
+        </label>
+        <select id="category" name="listing[filters]" class="form-select" required>
+            <% for (const category of categories) { %>
+                <option value="<%= category.value %>" <%= (normalizeCategory(draft.filters) || 'all') === category.value ? 'selected' : '' %>>
+                    <%= category.label %>
+                </option>
+            <% } %>
+        </select>
+    </div>
+</fieldset>
+<fieldset class="form-section">
+    <legend>Put it on the map</legend>
+    <p class="section-description">Help travelers find the right setting for their trip.</p>
+    <div class="field-grid">
+        <div class="field">
+            <label for="country">Country <span aria-hidden="true">*</span>
+            </label>
+            <input type="text" id="country" name="listing[country]" value="<%= draft.country || '' %>" maxlength="80" class="form-control" placeholder="India" autocomplete="country-name" aria-describedby="country-error" required>
+            <div id="country-error" class="invalid-feedback">Please add the country.</div>
+        </div>
+        <div class="field">
+            <label for="location">City or location <span aria-hidden="true">*</span>
+            </label>
+            <input type="text" id="location" name="listing[location]" value="<%= draft.location || '' %>" maxlength="120" class="form-control" placeholder="Jaipur, Rajasthan" autocomplete="address-level2" aria-describedby="location-error" required>
+            <div id="location-error" class="invalid-feedback">Please add the location.</div>
+        </div>
+    </div>
+</fieldset>
+<fieldset class="form-section">
+    <legend>The nightly price</legend>
+    <div class="field price-field">
+        <label for="price">Price in Indian rupees (₹) <span aria-hidden="true">*</span>
+        </label>
+        <input type="number" id="price" name="listing[price]" value="<%= draft.price ?? '' %>" min="0" max="10000000" step="any" class="form-control" placeholder="1200" aria-describedby="price-error" required>
+        <div id="price-error" class="invalid-feedback">Enter a price from ₹0 to ₹10,000,000.</div>
+    </div>
+</fieldset>
+<fieldset class="form-section">
+    <legend>A picture of your place</legend>
+    <% if (editing) { %>
+        <div class="current-photo">
+            <img src="<%= draft.image?.url ? originalImageUrl : '/images/stay-placeholder.svg' %>" data-fallback="/images/stay-placeholder.svg" alt="Current photo for <%= draft.title %>" width="240" height="160">
+            <p>Your current photo stays unless you upload a replacement.</p>
+        </div>
+    <% } %>
+    <div class="field">
+        <label for="image">
+            <%= editing ? 'Replace photo (optional)' : 'Upload a photo (optional)' %>
+        </label>
+        <input type="file" id="image" name="listing[image]" accept="image/png,image/jpeg" data-max-bytes="5242880" class="form-control" aria-describedby="image-help image-error">
+        <p id="image-help" class="field-help">PNG or JPEG only. Maximum 5 MB and 25 megapixels.</p>
+        <div id="image-error" class="invalid-feedback">Choose a PNG or JPEG image no larger than 5 MB.</div>
+    </div>
+</fieldset>

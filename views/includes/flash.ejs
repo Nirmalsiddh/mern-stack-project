@@ -1,13 +1,14 @@
-<% if(success && success.length) { %>
-    <div class="alert alert-success alert-dismissible fade show col-6 offset-3" role="alert">
-        <%= success %>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<% if (success && success.length) { %>
+    <div class="feedback alert alert-success alert-dismissible fade show" role="status">
+        <strong>All set.</strong> <%= success.join(' ') %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss success message">
+        </button>
     </div>
 <% } %>
-
-<% if(error && error.length) { %>
-    <div class="alert alert-danger alert-dismissible fade show col-6 offset-3" role="alert">
-        <%= error %>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<% if (error && error.length) { %>
+    <div class="feedback alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Please check.</strong> <%= error.join(' ') %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss error message">
+        </button>
     </div>
 <% } %>

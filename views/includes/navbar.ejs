@@ -1,34 +1,31 @@
-
-<nav class="navbar navbar-expand-md bg-body border-bottom sticky-top">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/listings"><i class="fa-solid fa-compass"></i></a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-            <div class="navbar-nav">
-                <a class="nav-link" href="/listings">HavenHub</a>
-            </div>
-            <div class="navbar-nav ms-auto">
-                <form class="d-flex" role="search" action="/listings/search" method="get">
-                    <input class="form-control me-2 search-inp" type="search" name="country" maxlength="100" placeholder="Search Destination Country">
-                    <button class="btn btn-search" type="submit"><i
-                            class="fa-solid fa-magnifying-glass"></i>Search</button>
-                </form>
-            </div>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/listings/new">Create New Listings</a>
-                <% if(!currUser) { %>
-                    <a class="nav-link" href="/signup"><b>SignUp</b></a>
-                    <a class="nav-link" href="/login"><b>Login</b></a>
-                    <% } %>
-                <% if(currUser) { %>
-                    <form action="/logout" method="post">
-                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button class="nav-link btn btn-link" type="submit"><b>Logout</b></button>
-                    </form>
-                    <% } %>
-            </div>
-        </div>
+<header class="site-header">
+    <div class="header-inner">
+        <a class="brand" href="/listings" aria-label="HavenHub home">
+            <span class="brand-mark">
+                <svg class="icon" aria-hidden="true">
+                    <use href="#icon-home"/>
+                </svg>
+            </span>
+            <span>HavenHub<span class="brand-dot">.</span>
+            </span>
+        </a>
+        <details class="mobile-navigation">
+            <summary>Menu <span aria-hidden="true">☰</span>
+            </summary>
+            <nav aria-label="Mobile navigation">
+                <%- include('navigation-links.ejs') %>
+            </nav>
+        </details>
+        <form class="site-search" role="search" action="/listings/search" method="get">
+            <label class="visually-hidden" for="site-search">Search by destination country</label>
+            <svg class="icon" aria-hidden="true">
+                <use href="#icon-search"/>
+            </svg>
+            <input type="search" name="country" maxlength="100" id="site-search" value="<%= typeof searchTerm === 'string' ? searchTerm : '' %>" placeholder="Where would you like to go?" autocomplete="off">
+            <button type="submit" aria-label="Search stays">Search</button>
+        </form>
+        <nav class="desktop-navigation" aria-label="Main navigation">
+            <%- include('navigation-links.ejs') %>
+        </nav>
     </div>
-</nav>
+</header>
