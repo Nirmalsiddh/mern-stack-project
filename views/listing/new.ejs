@@ -25,6 +25,14 @@
                     <label for="image" class="form-label">Upload Image</label>
                     <input type="file" name="listing[image]" class="form-control">
                 </div>
+                <div class="mb-3">
+                    <label for="filters" class="form-label">Category</label>
+                    <select id="filters" name="listing[filters]" class="form-select" required>
+                        <% for (const category of categories) { %>
+                            <option value="<%= category.value %>" <%= "all" === category.value ? "selected" : "" %>><%= category.label %></option>
+                        <% } %>
+                    </select>
+                </div>
                 <div class="row">
                     <div class="mb-3 col-md-4">
                         <label for="price" class="form-label">Price</label>

@@ -116,3 +116,30 @@ CLOUD_API_SECRET=your_cloudinary_api_secret
 ## Author
 
 Nirmal Siddh
+## Phase 1 regression tests
+
+Use the pinned Node.js 20.18.0 runtime and install dependencies with `npm ci`.
+
+```bash
+npm test
+```
+
+This runs the unit, template, browser-script, and mocked-upload tests without a
+MongoDB connection. The HTTP/database suite is explicitly skipped unless a safe
+test target is supplied. To run the complete suite against a local MongoDB:
+
+```bash
+HAVENHUB_TEST_MONGODB_URL=mongodb://127.0.0.1:27017/havenhub_test npm test
+```
+
+The suite only accepts an explicit loopback `havenhub_test` database name, adds a
+random suffix for each run, and verifies that the resulting database is empty
+before writing. It starts a separate application process on an ephemeral port
+with a temporary session secret. It never uses your application's `ATLASDB_URL`,
+changes `.env`, or runs the seed script. Cleanup deletes only document IDs from
+that isolated run; it does not drop databases or reset collections. Interrupted
+runs may leave isolated test records behind.
+
+Cloudinary upload handling is mocked for authorization checks. No real uploads
+or Cloudinary asset deletions are performed. Real Cloudinary integration still
+requires separate verification with securely supplied credentials.
