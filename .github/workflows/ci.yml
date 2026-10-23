@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: test
+  ATLASDB_URL: ''
+  SECRET: ''
+  CLOUD_NAME: ''
+  CLOUD_API_KEY: ''
+  CLOUD_API_SECRET: ''
+  UPLOADS_ENABLED: 'false'
+  HAVENHUB_TEST_MONGODB_URL: ''
+
+jobs:
+  unit-and-audit:
+    name: Unit tests and dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js from .nvmrc
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Verify Node.js version
+        run: node -e "const assert = require('node:assert/strict'); assert.equal(process.versions.node, require('node:fs').readFileSync('.nvmrc', 'utf8').trim()); assert.equal(process.versions.node.split('.')[0], '22'); console.log(process.version);"
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run tests without MongoDB (database suite explicitly skipped)
+        run: npm test
+      - name: Audit dependencies (fail on high or critical advisories)
+        run: npm audit --audit-level=high
+
+  integration:
+    name: MongoDB integration tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      # Keep the existing havenhub_test prefix; the suite adds a random suffix.
+      HAVENHUB_TEST_MONGODB_URL: mongodb://127.0.0.1:27017/havenhub_test_ci
+    services:
+      mongodb:
+        # Official MongoDB image; version 7.0.45 verified locally.
+        image: mongo@sha256:c53852c00c23ca9f23fc39690350ffa9a80e3642fe8f96879726d8da0abe80a7
+        ports:
+          - 127.0.0.1:27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+          --cpus 2
+          --memory 1g
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js from .nvmrc
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Verify Node.js version
+        run: node -e "const assert = require('node:assert/strict'); assert.equal(process.versions.node, require('node:fs').readFileSync('.nvmrc', 'utf8').trim()); assert.equal(process.versions.node.split('.')[0], '22'); console.log(process.version);"
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify disposable database target and readiness
+        run: |
+          node <<'NODE'
+          const { MongoClient } = require('mongodb');
+          (async () => {
+            const expected = 'mongodb://127.0.0.1:27017/havenhub_test_ci';
+            if (process.env.HAVENHUB_TEST_MONGODB_URL !== expected) {
+              throw new Error('CI requires the designated loopback test service.');
+            }
+            const client = new MongoClient(expected, {
+              serverSelectionTimeoutMS: 3000,
+              connectTimeoutMS: 3000,
+              timeoutMS: 3000,
+            });
+            try {
+              await client.connect();
+              await client.db().command({ ping: 1 }, { timeoutMS: 2000 });
+              console.log('Disposable loopback MongoDB service is ready.');
+            } finally {
+              await client.close();
+            }
+          })().catch(() => {
+            console.error('Disposable database safety/readiness check failed.');
+            process.exitCode = 1;
+          });
+          NODE
+      - name: Run complete suite (real MongoDB, mocked Cloudinary)
+        run: npm test
