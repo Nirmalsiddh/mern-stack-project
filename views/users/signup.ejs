@@ -4,9 +4,10 @@
             <h2>SignUp on WanderLust</h2>
             <br>
             <form method="post" action="/signup" class="needs-validation" novalidate>
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <div class="mb-3">
                     <label for="username" class="form-label">Username</label>
-                    <input type="text" id="username" placeholder="Enter Username" name="username" class="form-control" required>
+                    <input type="text" id="username" placeholder="Enter Username" name="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_]+" title="Use 3–32 letters, numbers, or underscores" autocomplete="username" class="form-control" required>
                     <div class="valid-feedback">
                         Looks good!
                     </div>
@@ -16,11 +17,11 @@
                 </div>
                 <div class="mb-3">
                     <label for="email" class="form-label">Email</label>
-                    <input type="email" id="email" placeholder="Enter EmailId" name="email" class="form-control" required>
+                    <input type="email" id="email" placeholder="Enter EmailId" name="email" maxlength="254" autocomplete="email" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" id="password" placeholder="Enter Password" name="password" class="form-control" required>
+                    <label for="password" class="form-label">Password (at least 12 characters)</label>
+                    <input type="password" id="password" placeholder="Enter Password" name="password" minlength="12" maxlength="128" autocomplete="new-password" class="form-control" required>
                 </div>
                 <button class="btn btn-outline-success">SignUp</button>
             </form>

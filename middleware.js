@@ -62,11 +62,12 @@ module.exports.validateListing = (req, res, next) => {
 }
 
 module.exports.validateReview = (req, res, next) => {
-    let {error} = reviewSchema.validate(req.body);
+    let { error, value } = reviewSchema.validate(req.body);
     if(error){
         let errMSG = error.details.map((err) => err.message).join(",");
         throw new ExpressError(400, errMSG);
     }else{
+        req.body = value;
         next();
     }
 }

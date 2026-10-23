@@ -1,5 +1,6 @@
 const Listing = require("../models/listing.js");
 const Review = require("../models/review.js");
+const { normalizeCategory } = require("../utils/categories");
 
 module.exports.createReview = async (req, res) => {
     let listing = res.locals.listing;
@@ -7,6 +8,10 @@ module.exports.createReview = async (req, res) => {
     newReview.author = req.user._id;
     listing.reviews.push(newReview);
 
+    // Adding a review also saves its parent; keep legacy category aliases valid.
+    const category = normalizeCategory(listing.filters);
+    if (category) listing.filters = category;
+    await listing.validate(); // Reject invalid parent data before inserting a review.
     await newReview.save();
     await listing.save();
 

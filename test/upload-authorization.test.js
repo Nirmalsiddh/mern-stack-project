@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const express = require('express');
 const mongoose = require('mongoose');
 const Listing = require('../models/listing');
-const { storage } = require('../cloudConfig');
+const { installHarnessSecurity, csrfSession, mockUpload, png } = require('../test-support/security');
 const router = require('../routes/listing');
 const { categories } = require('../utils/categories');
 
@@ -18,17 +18,13 @@ async function harness(t) {
     t.mock.method(Listing, 'findById', async id => id === listingId.toString() ? listing : null);
     // This unit harness mocks persistence, but still runs real document validation.
     t.mock.method(listing, 'save', async () => { await listing.validate(); updates++; return listing; });
-    t.mock.method(storage, '_handleFile', (req, file, done) => {
-        uploads++;
-        file.stream.resume();
-        file.stream.on('end', () => done(null, { path: 'https://example.invalid/upload.png', filename: 'mock-upload' }));
-    });
+    mockUpload(t, 'wanderlust_DEV/mock-upload', () => { uploads++; });
     const app = express();
+    installHarnessSecurity(app);
     app.use(express.urlencoded({ extended: true }));
     app.use((req, res, next) => {
         req.user = req.headers['x-test-user'] === 'owner' ? { _id: ownerId } : req.headers['x-test-user'] === 'stranger' ? { _id: strangerId } : undefined;
         req.isAuthenticated = () => Boolean(req.user);
-        req.session = {};
         req.flash = () => {};
         res.locals.categories = categories;
         next();
@@ -39,10 +35,13 @@ async function harness(t) {
     await new Promise(resolve => server.once('listening', resolve));
     t.after(() => new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }));
     return { listing, get uploads() { return uploads; }, get updates() { return updates; }, async send(user, id = listingId, withImage = true) {
+        const base = `http://127.0.0.1:${server.address().port}`;
+        const csrf = await csrfSession(base);
         const form = new FormData();
+        form.set('_csrf', csrf.token);
         for (const [key, value] of Object.entries({ title: 'Updated', description: 'Description', country: 'India', location: 'City', price: '200', filters: 'amazing pools' })) form.set(`listing[${key}]`, value);
-        if (withImage) form.set('listing[image]', new Blob(['fake PNG'], { type: 'image/png' }), 'test.png');
-        return fetch(`http://127.0.0.1:${server.address().port}/listings/${id}`, { method: 'PUT', headers: user ? { 'x-test-user': user } : {}, body: form, redirect: 'manual' });
+        if (withImage) form.set('listing[image]', new Blob([await png()], { type: 'image/png' }), 'test.png');
+        return fetch(`http://127.0.0.1:${server.address().port}/listings/${id}`, { method: 'PUT', headers: { Cookie: csrf.cookie, ...(user ? { 'x-test-user': user } : {}) }, body: form, redirect: 'manual' });
     } };
 }
 
@@ -75,7 +74,7 @@ test('authorized multipart update processes one mocked upload and saves image', 
     assert.equal(h.updates, 1);
     assert.equal(h.listing.title, 'Updated');
     assert.equal(h.listing.filters, 'amazing pools');
-    assert.equal(h.listing.image.url, 'https://example.invalid/upload.png');
+    assert.equal(h.listing.image.url, 'https://example.invalid/mock-upload.png');
 });
 test('authorized update without an image preserves the current image', async t => {
     const h = await harness(t);

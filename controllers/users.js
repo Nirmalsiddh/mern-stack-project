@@ -18,7 +18,7 @@ module.exports.signUp = async(req, res, next) => {
             res.redirect("/listings");
         });
     }catch(e){
-        req.flash("error", e.message);
+        req.flash("error", "Unable to create an account with those details.");
         res.redirect("/signup");
     }
 };
@@ -30,7 +30,7 @@ module.exports.renderLoginForm = (req, res) => {
 module.exports.login = async (req, res) => {
     // res.send("Welocome to the wanderlust, you are logged in!");
     req.flash("success", "Welcome back to Wanderlust");
-    let redirectUrl = res.locals.redirectUrl || "/listings";
+    let redirectUrl = require("../utils/safeRedirect")(res.locals.redirectUrl);
     res.redirect(redirectUrl);
 };
 
@@ -39,7 +39,10 @@ module.exports.logout = async(req, res, next) => {
         if(err){
             return next(err);
         }
-        req.flash("success", "you logged out!");
-        res.redirect("/listings");
+        req.session.destroy(err => {
+            if (err) return next(err);
+            res.clearCookie('havenhub.sid', { path: '/', httpOnly: true, sameSite: 'lax', secure: req.app.locals.config.production });
+            res.redirect('/listings');
+        });
     });
 };
